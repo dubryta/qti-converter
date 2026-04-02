@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canvas QTI Converter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #eef4f7;
+    --surface: #ffffff;
+    --border: #b8cdd9;
+    --accent: #084e90;
+    --accent2: #f57f3a;
+    --accent3: #00abc8;
+    --accent4: #f3bc48;
+    --accent5: #006a38;
+    --text: #1c1c1c;
+    --muted: #4a6070;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--accent);
+    color: white;
+    padding: 28px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    border-bottom: 4px solid #f3bc48;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+
+  header .subtitle {
+    font-size: 0.85rem;
+    opacity: 0.75;
+    font-weight: 300;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    min-height: calc(100vh - 80px);
+  }
+
+  .main-panel {
+    padding: 32px 40px;
+    border-right: 1px solid var(--border);
+  }
+
+  .side-panel {
+    padding: 32px 28px;
+    background: var(--surface);
+  }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent3);
+    margin-bottom: 14px;
+  }
+
+  .field-group {
+    margin-bottom: 24px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent3);
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+    cursor: pointer;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+
+  .radio-group input[type="radio"] { display: none; }
+
+  .radio-group label.selected {
+    background: var(--accent3);
+    color: white;
+    border-color: var(--accent3);
+  }
+
+  textarea {
+    width: 100%;
+    height: 380px;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: #fafaf7;
+    color: var(--text);
+    border-radius: 4px;
+    resize: vertical;
+    outline: none;
+    tab-size: 2;
+    transition: border-color 0.15s;
+  }
+
+  textarea:focus { border-color: var(--accent3); }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .btn {
+    padding: 11px 22px;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .btn-primary:hover { background: #063d72; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--accent2);
+    border: 1px solid #fcd4b8;
+  }
+
+  .btn-danger:hover { background: #fff4ee; }
+
+  /* Status messages */
+  #status {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 0.88rem;
+    display: none;
+  }
+
+  #status.success { background: #e0f5ee; color: #006a38; border: 1px solid #4c9e45; display: block; }
+  #status.error { background: #fff0e6; color: #c45e1a; border: 1px solid #f57f3a; display: block; }
+  #status.info { background: #e0f4f8; color: #084e90; border: 1px solid #00abc8; display: block; }
+
+  /* Side panel reference */
+  .ref-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+
+  .ref-block h3 {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 10px;
+  }
+
+  .ref-block pre {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .ref-block .comment {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* Question counter */
+  #q-counter {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent3);
+    margin-top: 6px;
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .tag-mc { background: #ceeaf2; color: #00abc8; }
+  .tag-tf { background: #d0e5f5; color: #084e90; }
+  .tag-mt { background: #fdebd8; color: #c45e1a; }
+  .tag-es { background: #ddf0e6; color: #006a38; }
+  .tag-ma { background: #d8eff5; color: #007a96; }
+  .tag-fb { background: #fdf3d4; color: #9a6e00; }
+
+  .import-steps {
+    margin-top: 20px;
+  }
+
+  .step {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .step-num {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--accent3);
+    min-width: 18px;
+  }
+
+  .step-text { color: var(--text); }
+  .step-text strong { color: var(--accent2); font-weight: 600; }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  .file-load-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  #file-input { display: none; }
+
+  .filename {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* Import direction tabs */
+  .tab-row {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .tab-btn {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent3);
+  }
+
+  .tab-panel { display: none; padding-top: 14px; }
+  .tab-panel.active { display: block; }
+
+  .nq-pathway {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3);
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+
+  .pathway-label {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .pathway-note {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .step-link {
+    margin-top: 8px;
+    font-size: 0.75rem;
+  }
+
+  .step-link a {
+    color: var(--accent3);
+    text-decoration: none;
+  }
+
+  .step-link a:hover {
+    text-decoration: underline;
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Canvas QTI Converter</h1>
+  <span class="subtitle">Plain text → Canvas LMS import package</span>
+</header>
+
+<div class="layout">
+  <!-- MAIN PANEL -->
+  <div class="main-panel">
+
+    <div class="field-group">
+      <label>Quiz / Bank Title</label>
+      <input type="text" id="quiz-title" value="My Quiz" placeholder="Enter quiz title...">
+    </div>
+
+    <div class="field-group">
+      <label>Quiz Type</label>
+      <div class="radio-group" id="quiz-type-group">
+        <label class="selected" data-val="classic">
+          <input type="radio" name="qtype" value="classic" checked> Classic Quizzes
+        </label>
+        <label data-val="new">
+          <input type="radio" name="qtype" value="new"> New Quizzes
+        </label>
+        <label data-val="both">
+          <input type="radio" name="qtype" value="both"> Both (two files)
+        </label>
+      </div>
+    </div>
+
+    <h2>Question Text</h2>
+
+    <div class="file-load-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">Load .txt File</button>
+      <span class="filename" id="fname"></span>
+      <input type="file" id="file-input" accept=".txt">
+    </div>
+
+    <textarea id="qtext" placeholder="Paste your questions here, or load a .txt file above..."></textarea>
+    <div id="q-counter">No questions detected yet.</div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="runConvert()">⬇ Generate QTI Package</button>
+      <button class="btn btn-secondary" onclick="loadExample()">Load Example</button>
+      <button class="btn btn-danger" onclick="clearAll()">Clear</button>
+    </div>
+
+    <div id="status"></div>
+
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel">
+    <h2>Format Guide</h2>
+
+    <div class="ref-block">
+      <h3><span class="tag tag-mc">MC</span> Multiple Choice</h3>
+      <pre><span class="comment">// Asterisk marks the ONE correct answer</span>
+
+What is 2 + 2?
+a) 3
+*b) 4
+c) 5
+d) 6</pre>
+    </div>
+
+    <div class="ref-block">
+      <h3><span class="tag tag-ma">MA</span> Multiple Answer</h3>
+      <pre><span class="comment">// Asterisk marks ALL correct answers</span>
+<span class="comment">// (two or more asterisks = multiple answer)</span>
+
+Which are primary colors?
+*a) Red
+b) Green
+*c) Blue
+*d) Yellow
+e) Purple</pre>
+    </div>
+
+    <div class="ref-block">
+      <h3><span class="tag tag-tf">T/F</span> True / False</h3>
+      <pre><span class="comment">// Choices must be True and False</span>
+
+The sky is blue.
+*a) True
+b) False</pre>
+    </div>
+
+    <div class="ref-block">
+      <h3><span class="tag tag-mt">MT</span> Matching</h3>
+      <pre><span class="comment">// Pairs separated by =</span>
+<span class="comment">// No asterisk needed</span>
+
+MATCHING: Match each term.
+a) Photosynthesis = Plants making food
+b) Respiration = Cells releasing energy
+c) Osmosis = Water crossing membranes</pre>
+    </div>
+
+    <div class="ref-block">
+      <h3><span class="tag tag-fb">FB</span> Fill in the Blank</h3>
+      <pre><span class="comment">// Use FITB: prefix</span>
+<span class="comment">// Correct answer on next line with *</span>
+
+FITB: The capital of France is _____.
+*Paris</pre>
+    </div>
+
+    <div class="ref-block">
+      <h3><span class="tag tag-es">ES</span> Essay</h3>
+      <pre><span class="comment">// Use ESSAY: prefix</span>
+
+ESSAY: Explain the impact of
+globalization on rural communities.</pre>
+    </div>
+
+    <hr class="divider">
+
+    <div class="import-steps">
+      <h2>Canvas Import Steps</h2>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchTab('classic', this)">Classic Quizzes</button>
+        <button class="tab-btn" onclick="switchTab('new', this)">New Quizzes</button>
+      </div>
+
+      <div id="tab-classic" class="tab-panel active">
+        <div class="step"><span class="step-num">1</span><span class="step-text">Go to <strong>Settings → Import Course Content</strong></span></div>
+        <div class="step"><span class="step-num">2</span><span class="step-text">Set Content Type to <strong>QTI .zip file</strong></span></div>
+        <div class="step"><span class="step-num">3</span><span class="step-text">Leave <strong>"Convert to New Quizzes"</strong> unchecked</span></div>
+        <div class="step"><span class="step-num">4</span><span class="step-text">Upload your <strong>.zip file</strong> and click Import</span></div>
+        <div class="step"><span class="step-num">5</span><span class="step-text">Find your quiz under <strong>Quizzes</strong> in the course</span></div>
+        <div class="step"><span class="step-num">6</span><span class="step-text">To use as a bank: open the quiz, click <strong>Settings → Build Question Bank</strong></span></div>
+          <div class="step-link"><a href="https://community.instructure.com/en/kb/articles/660996-how-do-i-import-quizzes-from-qti-packages" target="_blank">Canvas guide: Import quizzes from QTI packages ↗</a></div>
+      </div>
+
+      <div id="tab-new" class="tab-panel">
+
+        <div class="nq-pathway">
+          <div class="pathway-label">Option A — Import as a Quiz</div>
+          <div class="pathway-note">Questions land directly in a new New Quizzes assignment, ready to assign to students.</div>
+          <div class="step"><span class="step-num">1</span><span class="step-text">In your course, go to <strong>Settings → Import Course Content</strong></span></div>
+          <div class="step"><span class="step-num">2</span><span class="step-text">Set Content Type to <strong>QTI .zip file</strong></span></div>
+          <div class="step"><span class="step-num">3</span><span class="step-text">Check <strong>"Convert content to New Quizzes"</strong></span></div>
+          <div class="step"><span class="step-num">4</span><span class="step-text">Upload your <strong>.zip file</strong> and click Import</span></div>
+          <div class="step"><span class="step-num">5</span><span class="step-text">Find the new quiz under <strong>Quizzes</strong> in your course</span></div>
+          <div class="step-link"><a href="https://community.instructure.com/en/kb/articles/661050-how-do-i-import-a-quiz-from-a-qti-package-in-new-quizzes" target="_blank">Canvas guide: Import a quiz from a QTI package ↗</a></div>
+        </div>
+
+        <div class="nq-pathway">
+          <div class="pathway-label">Option B — Import into an Item Bank</div>
+          <div class="pathway-note">Questions go into a reusable bank. Draw from the bank when building any New Quiz in the course.</div>
+          <div class="step"><span class="step-num">1</span><span class="step-text">In your course, go to <strong>Quizzes</strong> and open or create a <strong>New Quiz</strong></span></div>
+          <div class="step"><span class="step-num">2</span><span class="step-text">Click <strong>Item Banks</strong> in the quiz editor</span></div>
+          <div class="step"><span class="step-num">3</span><span class="step-text">Open an existing bank or create a new one</span></div>
+          <div class="step"><span class="step-num">4</span><span class="step-text">Click the bank's <strong>options menu (⋮)</strong> and select <strong>Import</strong></span></div>
+          <div class="step"><span class="step-num">5</span><span class="step-text">Upload your <strong>.zip file</strong> — questions will be added to the bank</span></div>
+          <div class="step"><span class="step-num">6</span><span class="step-text">Return to your quiz and insert questions from the bank</span></div>
+          <div class="step-link"><a href="https://community.instructure.com/en/kb/articles/661079-how-do-i-import-questions-from-a-qti-package-into-an-item-bank-in-new-quizzes" target="_blank">Canvas guide: Import questions into an Item Bank ↗</a></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── Radio button UX ────────────────────────────────────────────────
+document.querySelectorAll('#quiz-type-group label').forEach(lbl => {
+  lbl.addEventListener('click', () => {
+    document.querySelectorAll('#quiz-type-group label').forEach(l => l.classList.remove('selected'));
+    lbl.classList.add('selected');
+  });
+});
+
+// ─── Import directions tab switcher ──────────────────────────────────
+function switchTab(which, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + which).classList.add('active');
+}
+
+// ─── File load ────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  document.getElementById('fname').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('qtext').value = e.target.result;
+    updateCounter();
+  };
+  reader.readAsText(file);
+});
+
+// ─── Live counter ─────────────────────────────────────────────────────
+document.getElementById('qtext').addEventListener('input', updateCounter);
+
+function updateCounter() {
+  const text = document.getElementById('qtext').value;
+  const parsed = parseQuestions(text);
+  const ctr = document.getElementById('q-counter');
+  if (parsed.length === 0) {
+    ctr.textContent = 'No questions detected yet.';
+  } else {
+    const counts = { mc: 0, ma: 0, tf: 0, matching: 0, fitb: 0, essay: 0 };
+    parsed.forEach(q => counts[q.type]++);
+    const parts = [];
+    if (counts.mc) parts.push(`${counts.mc} multiple choice`);
+    if (counts.ma) parts.push(`${counts.ma} multiple answer`);
+    if (counts.tf) parts.push(`${counts.tf} true/false`);
+    if (counts.matching) parts.push(`${counts.matching} matching`);
+    if (counts.fitb) parts.push(`${counts.fitb} fill-in-the-blank`);
+    if (counts.essay) parts.push(`${counts.essay} essay`);
+    ctr.textContent = `Detected: ${parsed.length} question${parsed.length > 1 ? 's' : ''} — ${parts.join(', ')}`;
+  }
+}
+
+// ─── Clear / Example ─────────────────────────────────────────────────
+function clearAll() {
+  document.getElementById('qtext').value = '';
+  document.getElementById('quiz-title').value = 'My Quiz';
+  document.getElementById('fname').textContent = '';
+  document.getElementById('q-counter').textContent = 'No questions detected yet.';
+  document.getElementById('status').className = '';
+  document.getElementById('status').textContent = '';
+}
+
+function loadExample() {
+  document.getElementById('quiz-title').value = 'Anthropology 101 Sample Quiz';
+  document.getElementById('qtext').value = `What is cultural anthropology primarily concerned with?
+a) Fossil records of early humans
+*b) Human cultures, societies, and social behavior
+c) Biological evolution of primates
+d) Archaeological artifacts
+
+Anthropology is the study of humans across time and space.
+*a) True
+b) False
+
+MATCHING: Match each anthropological concept to its definition.
+a) Ethnography = In-depth study of a culture through fieldwork
+b) Enculturation = Process of learning one's own culture
+c) Cultural relativism = Understanding cultures on their own terms
+d) Ethnocentrism = Judging other cultures by one's own standards
+
+ESSAY: Explain how globalization has affected indigenous communities. Use at least one specific example in your response.
+
+Which of the following best describes participant observation?
+a) Reading ethnographic accounts written by others
+b) Conducting surveys in a community
+*c) Living within a community to observe and participate in daily life
+d) Analyzing census data from a distance
+
+Marriage between members of the same social group is called endogamy.
+*a) True
+b) False`;
+  updateCounter();
+  showStatus('Example questions loaded. Click "Generate QTI Package" to convert.', 'info');
+}
+
+// ─── PARSER ──────────────────────────────────────────────────────────
+function parseQuestions(rawText) {
+  const questions = [];
+  const lines = rawText.split('\n').map(l => l.trimEnd());
+
+  let i = 0;
+  while (i < lines.length) {
+    if (!lines[i].trim()) { i++; continue; }
+
+    const line = lines[i].trim();
+
+    // ESSAY detection
+    if (/^ESSAY:/i.test(line)) {
+      let essayText = line.replace(/^ESSAY:\s*/i, '').trim();
+      i++;
+      while (i < lines.length && lines[i].trim() && !isChoiceLine(lines[i]) && !/^ESSAY:/i.test(lines[i]) && !/^MATCHING:/i.test(lines[i]) && !/^FITB:/i.test(lines[i])) {
+        essayText += ' ' + lines[i].trim();
+        i++;
+      }
+      questions.push({ type: 'essay', text: essayText });
+      continue;
+    }
+
+    // FITB detection
+    if (/^FITB:/i.test(line)) {
+      let fitbText = line.replace(/^FITB:\s*/i, '').trim();
+      i++;
+      // Collect continuation lines for the question text
+      while (i < lines.length && lines[i].trim() && !lines[i].trim().startsWith('*') && !isChoiceLine(lines[i]) && !/^(ESSAY|FITB|MATCHING):/i.test(lines[i])) {
+        fitbText += ' ' + lines[i].trim();
+        i++;
+      }
+      // Collect correct answers (lines starting with *)
+      const answers = [];
+      while (i < lines.length && lines[i].trim().startsWith('*') && !isChoiceLine(lines[i])) {
+        answers.push(lines[i].trim().replace(/^\*/, '').trim());
+        i++;
+      }
+      questions.push({ type: 'fitb', text: fitbText, answers });
+      continue;
+    }
+
+    // MATCHING detection
+    if (/^MATCHING:/i.test(line)) {
+      const prompt = line.replace(/^MATCHING:\s*/i, '').trim();
+      const pairs = [];
+      i++;
+      while (i < lines.length && lines[i].trim() && isChoiceLine(lines[i])) {
+        const choiceText = lines[i].trim().replace(/^[a-zA-Z][).\s]+/, '');
+        const sep = choiceText.match(/\s*[=→]\s*/);
+        if (sep) {
+          const idx = choiceText.search(/\s*[=→]\s*/);
+          pairs.push({ left: choiceText.substring(0, idx).trim(), right: choiceText.substring(idx).replace(/^[=→]\s*/, '').trim() });
+        }
+        i++;
+      }
+      if (pairs.length > 0) questions.push({ type: 'matching', text: prompt, pairs });
+      continue;
+    }
+
+    // Check if this line looks like a question (not a choice line)
+    if (!isChoiceLine(line) && line.length > 4) {
+      let qText = line.replace(/^(Q(uestion)?\s*)?\d+[.):\s]+\s*/i, '');
+      i++;
+      while (i < lines.length && lines[i].trim() && !isChoiceLine(lines[i]) && !/^(ESSAY|FITB|MATCHING):/i.test(lines[i])) {
+        qText += ' ' + lines[i].trim();
+        i++;
+      }
+
+      // Gather choices
+      const choices = [];
+      while (i < lines.length && isChoiceLine(lines[i])) {
+        const raw = lines[i].trim();
+        const correct = raw.startsWith('*');
+        const choiceText = raw.replace(/^\*/, '').replace(/^[a-zA-Z][).\s]+/, '').trim();
+        choices.push({ text: choiceText, correct });
+        i++;
+      }
+
+      if (choices.length === 0) { continue; }
+
+      // Determine type: T/F, multiple-answer, or standard MC
+      const choiceTexts = choices.map(c => c.text.toUpperCase());
+      const isTF = choices.length === 2 &&
+        ((choiceTexts[0] === 'TRUE' || choiceTexts[0] === 'FALSE') &&
+         (choiceTexts[1] === 'TRUE' || choiceTexts[1] === 'FALSE'));
+      const correctCount = choices.filter(c => c.correct).length;
+
+      if (isTF) {
+        const correctChoice = choices.find(c => c.correct);
+        questions.push({ type: 'tf', text: qText, correct: correctChoice ? correctChoice.text.toUpperCase() : 'TRUE' });
+      } else if (correctCount > 1) {
+        questions.push({ type: 'ma', text: qText, choices });
+      } else {
+        questions.push({ type: 'mc', text: qText, choices });
+      }
+      continue;
+    }
+
+    i++;
+  }
+  return questions;
+}
+
+function isChoiceLine(line) {
+  return /^\*?[a-zA-Z][).]\s+\S/.test(line.trim());
+}
+
+// ─── XML helpers ─────────────────────────────────────────────────────
+function xmlEsc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function uid() {
+  return 'i' + Math.random().toString(36).substr(2, 10);
+}
+
+// ─── QTI 1.2 GENERATORS ───────────────────────────────────────────────
+function buildMC(q, qid) {
+  const respId = uid();
+  const choiceXml = q.choices.map((c, idx) => {
+    const cid = `${qid}_c${idx}`;
+    return `        <response_label ident="${cid}"><material><mattext texttype="text/plain">${xmlEsc(c.text)}</mattext></material></response_label>`;
+  }).join('\n');
+
+  const correctCid = q.choices.reduce((acc, c, idx) => c.correct ? `${qid}_c${idx}` : acc, `${qid}_c0`);
+
+  return `  <item ident="${qid}" title="Question">
+    <itemmetadata><qtimetadata>
+      <qtimetadatafield><fieldlabel>question_type</fieldlabel><fieldentry>multiple_choice_question</fieldentry></qtimetadatafield>
+      <qtimetadatafield><fieldlabel>points_possible</fieldlabel><fieldentry>1</fieldentry></qtimetadatafield>
+    </qtimetadata></itemmetadata>
+    <presentation><material><mattext texttype="text/plain">${xmlEsc(q.text)}</mattext></material>
+      <response_lid ident="${respId}" rcardinality="Single">
+        <render_choice>
+${choiceXml}
+        </render_choice>
+      </response_lid>
+    </presentation>
+    <resprocessing>
+      <outcomes><decvar maxvalue="100" minvalue="0" varname="SCORE" vartype="Decimal"/></outcomes>
+      <respcondition continue="No">
+        <conditionvar><varequal respident="${respId}">${correctCid}</varequal></conditionvar>
+        <setvar action="Set" varname="SCORE">100</setvar>
+      </respcondition>
+    </resprocessing>
+  </item>`;
+}
+
+function buildTF(q, qid) {
+  const respId = uid();
+  const trueId = `${qid}_true`;
+  const falseId = `${qid}_false`;
+  const correctId = q.correct === 'TRUE' ? trueId : falseId;
+
+  return `  <item ident="${qid}" title="Question">
+    <itemmetadata><qtimetadata>
+      <qtimetadatafield><fieldlabel>question_type</fieldlabel><fieldentry>true_false_question</fieldentry></qtimetadatafield>
+      <qtimetadatafield><fieldlabel>points_possible</fieldlabel><fieldentry>1</fieldentry></qtimetadatafield>
+    </qtimetadata></itemmetadata>
+    <presentation><material><mattext texttype="text/plain">${xmlEsc(q.text)}</mattext></material>
+      <response_lid ident="${respId}" rcardinality="Single">
+        <render_choice>
+          <response_label ident="${trueId}"><material><mattext texttype="text/plain">True</mattext></material></response_label>
+          <response_label ident="${falseId}"><material><mattext texttype="text/plain">False</mattext></material></response_label>
+        </render_choice>
+      </response_lid>
+    </presentation>
+    <resprocessing>
+      <outcomes><decvar maxvalue="100" minvalue="0" varname="SCORE" vartype="Decimal"/></outcomes>
+      <respcondition continue="No">
+        <conditionvar><varequal respident="${respId}">${correctId}</varequal></conditionvar>
+        <setvar action="Set" varname="SCORE">100</setvar>
+      </respcondition>
+    </resprocessing>
+  </item>`;
+}
+
+function buildMatching(q, qid) {
+  // Canvas QTI 1.2 matching: one response_lid per left-side term,
+  // each containing a render_choice with ALL right-side options as the dropdown.
+  // Correct answer is identified in resprocessing per response_lid.
+
+  // Assign stable IDs for each right-side answer option
+  const rightIds = q.pairs.map((_, idx) => `${qid}_r${idx}`);
+
+  // Build one response_lid block per left-side term
+  const responseLids = q.pairs.map((p, idx) => {
+    const lidIdent = `${qid}_resp${idx}`;
+    const allRightOptions = q.pairs.map((rp, ridx) =>
+      `          <response_label ident="${rightIds[ridx]}"><material><mattext texttype="text/plain">${xmlEsc(rp.right)}</mattext></material></response_label>`
+    ).join('\n');
+    return `      <response_lid ident="${lidIdent}" rcardinality="Single">
+        <material><mattext texttype="text/plain">${xmlEsc(p.left)}</mattext></material>
+        <render_choice shuffle="No">
+${allRightOptions}
+        </render_choice>
+      </response_lid>`;
+  }).join('\n');
+
+  // Build scoring: each correct pair adds a proportional share of 100
+  const pointEach = Math.round(100 / q.pairs.length);
+  const condXml = q.pairs.map((p, idx) => {
+    const lidIdent = `${qid}_resp${idx}`;
+    const correctRightId = rightIds[idx];
+    return `      <respcondition continue="Yes">
+        <conditionvar><varequal respident="${lidIdent}">${correctRightId}</varequal></conditionvar>
+        <setvar action="Add" varname="SCORE">${pointEach}</setvar>
+      </respcondition>`;
+  }).join('\n');
+
+  return `  <item ident="${qid}" title="Question">
+    <itemmetadata><qtimetadata>
+      <qtimetadatafield><fieldlabel>question_type</fieldlabel><fieldentry>matching_question</fieldentry></qtimetadatafield>
+      <qtimetadatafield><fieldlabel>points_possible</fieldlabel><fieldentry>1</fieldentry></qtimetadatafield>
+    </qtimetadata></itemmetadata>
+    <presentation>
+      <material><mattext texttype="text/plain">${xmlEsc(q.text)}</mattext></material>
+${responseLids}
+    </presentation>
+    <resprocessing>
+      <outcomes><decvar maxvalue="100" minvalue="0" varname="SCORE" vartype="Decimal"/></outcomes>
+${condXml}
+    </resprocessing>
+  </item>`;
+}
+
+function buildEssay(q, qid) {
+  const respId = `${qid}_resp`;
+  return `  <item ident="${qid}" title="Question">
+    <itemmetadata><qtimetadata>
+      <qtimetadatafield><fieldlabel>question_type</fieldlabel><fieldentry>essay_question</fieldentry></qtimetadatafield>
+      <qtimetadatafield><fieldlabel>points_possible</fieldlabel><fieldentry>1</fieldentry></qtimetadatafield>
+    </qtimetadata></itemmetadata>
+    <presentation><material><mattext texttype="text/plain">${xmlEsc(q.text)}</mattext></material>
+      <response_str ident="${respId}" rcardinality="Single"><render_fib rows="10" columns="80"/></response_str>
+    </presentation>
+    <resprocessing>
+      <outcomes><decvar maxvalue="100" minvalue="0" varname="SCORE" vartype="Decimal"/></outcomes>
+    </resprocessing>
+  </item>`;
+}
+
+function buildMA(q, qid) {
+  // Multiple answer: each choice is independently correct/incorrect
+  const respId = uid();
+  const choiceXml = q.choices.map((c, idx) => {
+    const cid = `${qid}_c${idx}`;
+    return `        <response_label ident="${cid}"><material><mattext texttype="text/plain">${xmlEsc(c.text)}</mattext></material></response_label>`;
+  }).join('\n');
+
+  // Score each correct choice independently; penalize wrong selections
+  const correctChoices = q.choices.filter(c => c.correct);
+  const pointEach = correctChoices.length > 0 ? Math.round(100 / correctChoices.length) : 0;
+
+  const condXml = q.choices.map((c, idx) => {
+    const cid = `${qid}_c${idx}`;
+    if (c.correct) {
+      return `      <respcondition continue="Yes">
+        <conditionvar><varequal respident="${respId}">${cid}</varequal></conditionvar>
+        <setvar action="Add" varname="SCORE">${pointEach}</setvar>
+      </respcondition>`;
+    }
+    return '';
+  }).filter(Boolean).join('\n');
+
+  return `  <item ident="${qid}" title="Question">
+    <itemmetadata><qtimetadata>
+      <qtimetadatafield><fieldlabel>question_type</fieldlabel><fieldentry>multiple_answers_question</fieldentry></qtimetadatafield>
+      <qtimetadatafield><fieldlabel>points_possible</fieldlabel><fieldentry>1</fieldentry></qtimetadatafield>
+    </qtimetadata></itemmetadata>
+    <presentation><material><mattext texttype="text/plain">${xmlEsc(q.text)}</mattext></material>
+      <response_lid ident="${respId}" rcardinality="Multiple">
+        <render_choice>
+${choiceXml}
+        </render_choice>
+      </response_lid>
+    </presentation>
+    <resprocessing>
+      <outcomes><decvar maxvalue="100" minvalue="0" varname="SCORE" vartype="Decimal"/></outcomes>
+${condXml}
+    </resprocessing>
+  </item>`;
+}
+
+function buildFITB(q, qid) {
+  const respId = `${qid}_resp`;
+  // Build a respcondition for each acceptable answer
+  const condXml = (q.answers && q.answers.length > 0)
+    ? q.answers.map(ans => `      <respcondition continue="No">
+        <conditionvar><varequal respident="${respId}" case="No">${xmlEsc(ans)}</varequal></conditionvar>
+        <setvar action="Set" varname="SCORE">100</setvar>
+      </respcondition>`).join('\n')
+    : '';
+
+  return `  <item ident="${qid}" title="Question">
+    <itemmetadata><qtimetadata>
+      <qtimetadatafield><fieldlabel>question_type</fieldlabel><fieldentry>short_answer_question</fieldentry></qtimetadatafield>
+      <qtimetadatafield><fieldlabel>points_possible</fieldlabel><fieldentry>1</fieldentry></qtimetadatafield>
+    </qtimetadata></itemmetadata>
+    <presentation><material><mattext texttype="text/plain">${xmlEsc(q.text)}</mattext></material>
+      <response_str ident="${respId}" rcardinality="Single"><render_fib fibtype="String" rows="1" columns="40"/></response_str>
+    </presentation>
+    <resprocessing>
+      <outcomes><decvar maxvalue="100" minvalue="0" varname="SCORE" vartype="Decimal"/></outcomes>
+${condXml}
+    </resprocessing>
+  </item>`;
+}
+
+function buildQTI12(questions, title) {
+  const assessId = uid();
+  const itemsXml = questions.map(q => {
+    const qid = uid();
+    if (q.type === 'mc') return buildMC(q, qid);
+    if (q.type === 'ma') return buildMA(q, qid);
+    if (q.type === 'tf') return buildTF(q, qid);
+    if (q.type === 'matching') return buildMatching(q, qid);
+    if (q.type === 'fitb') return buildFITB(q, qid);
+    if (q.type === 'essay') return buildEssay(q, qid);
+    return '';
+  }).join('\n\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<questestinterop xmlns="http://www.imsglobal.org/xsd/ims_qtiasiv1p2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsglobal.org/xsd/ims_qtiasiv1p2 http://www.imsglobal.org/xsd/ims_qtiasiv1p2p1.xsd">
+  <assessment ident="${assessId}" title="${xmlEsc(title)}">
+    <qtimetadata>
+      <qtimetadatafield><fieldlabel>cc_maxattempts</fieldlabel><fieldentry>1</fieldentry></qtimetadatafield>
+    </qtimetadata>
+    <section ident="root_section">
+${itemsXml}
+    </section>
+  </assessment>
+</questestinterop>`;
+}
+
+function buildManifest(assessId, title, filename) {
+  const manifestId = uid();
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<manifest identifier="${manifestId}"
+  xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1"
+  xmlns:lom="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource"
+  xmlns:imsmd="http://www.imsglobal.org/xsd/imsmd_v1p2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1 http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1.xsd">
+  <metadata>
+    <schema>IMS Content</schema>
+    <schemaversion>1.1.3</schemaversion>
+    <imsmd:lom><imsmd:general>
+      <imsmd:title><imsmd:string>${xmlEsc(title)}</imsmd:string></imsmd:title>
+    </imsmd:general></imsmd:lom>
+  </metadata>
+  <organizations/>
+  <resources>
+    <resource identifier="${assessId}" type="imsqti_xmlv1p2">
+      <file href="${filename}"/>
+    </resource>
+  </resources>
+</manifest>`;
+}
+
+// ─── ZIP BUILDER ─────────────────────────────────────────────────────
+async function buildZip(questions, title) {
+  const zip = new JSZip();
+  const assessId = uid();
+  const filename = `${assessId}/${assessId}.xml`;
+  const qtiXml = buildQTI12(questions, title);
+  const manifestXml = buildManifest(assessId, title, filename);
+  zip.file('imsmanifest.xml', manifestXml);
+  zip.file(filename, qtiXml);
+  return await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' });
+}
+
+// ─── DOWNLOAD HELPER ─────────────────────────────────────────────────
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ─── STATUS ──────────────────────────────────────────────────────────
+function showStatus(msg, type = 'info') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type;
+}
+
+// ─── MAIN CONVERT ────────────────────────────────────────────────────
+async function runConvert() {
+  const text = document.getElementById('qtext').value.trim();
+  const title = document.getElementById('quiz-title').value.trim() || 'My Quiz';
+  const qtype = document.querySelector('input[name="qtype"]:checked').value;
+
+  if (!text) {
+    showStatus('Please enter or load some questions first.', 'error');
+    return;
+  }
+
+  const questions = parseQuestions(text);
+
+  if (questions.length === 0) {
+    showStatus('No questions could be parsed. Check your formatting using the guide on the right.', 'error');
+    return;
+  }
+
+  showStatus(`Generating QTI package for ${questions.length} question(s)...`, 'info');
+
+  try {
+    const safeName = title.replace(/[^a-zA-Z0-9_\- ]/g, '').trim().replace(/\s+/g, '_');
+
+    if (qtype === 'classic' || qtype === 'both') {
+      const blob = await buildZip(questions, title);
+      downloadBlob(blob, `${safeName}_classic_qti.zip`);
+    }
+
+    if (qtype === 'new' || qtype === 'both') {
+      // For New Quizzes we use the same QTI 1.2 format — Canvas converts on import
+      // We label it clearly so users know to check "Convert to New Quizzes" on import
+      const blob = await buildZip(questions, title);
+      downloadBlob(blob, `${safeName}_newquizzes_qti.zip`);
+    }
+
+    const fileCount = qtype === 'both' ? 'two .zip files' : 'one .zip file';
+    const note = qtype === 'new' || qtype === 'both'
+      ? ' For New Quizzes: check "Convert content to New Quizzes" when importing in Canvas Settings.'
+      : '';
+    showStatus(`✓ Success! Downloaded ${fileCount} with ${questions.length} question(s).${note}`, 'success');
+
+  } catch (err) {
+    showStatus('Error generating file: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+</script>
+</body>
+</html>
